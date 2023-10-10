@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres
+    restart: always
+    container_name: mailing_service_postgres
+    volumes:
+      - ~/mailing_service/pg_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+  mailing_service:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mailing_service
+    command: sh -c "python manage.py collectstatic --no-input && python manage.py makemigrations && python manage.py migrate && gunicorn mailing_service.wsgi:application --bind 0.0.0.0:8000"
+    ports:
+      - 8000:8000
+    depends_on:
+      - db
+      - rabbitmq
+    env_file:
+      - .env
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: mailing_service_rabbitmq
+    hostname: my-rabbit
+    restart: always
+    ports:
+      - 5672:5672
